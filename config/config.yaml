@@ -1,0 +1,7 @@
+
+
+variant-filtering:
+  minimum-allele-count: 10
+
+sample-filtering:
+  maximum-mic: 6

@@ -1,9 +1,9 @@
 import pandas as pd
 import sgkit as sg
 
-df_mapping = pd.read_csv(snakemake.input[0])
-df_gwas = pd.read_csv(snakemake.input[1])
-ds_input = sg.load_dataset(snakemake.input[2]) # genotype information etc.
+df_mapping = pd.read_csv(snakemake.input[0]) # type: ignore
+df_gwas = pd.read_csv(snakemake.input[1]) # type: ignore
+ds_input = sg.load_dataset(snakemake.input[2]) # genotype information etc. # type: ignore
 
 
 
@@ -40,5 +40,5 @@ ds_final = (ds_gwas.merge(ds_input, join='left')
             .drop(['allele', 'Unnamed: 0_x', 'Unnamed: 0_y', 'pos'])
 )
 
-sg.save_dataset(ds_final, snakemake.output[0], auto_rechunk=True)
+sg.save_dataset(ds_final, snakemake.output[0], auto_rechunk=True) # type: ignore
 

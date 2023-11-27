@@ -8,9 +8,9 @@ import sgkit as sg
 
 for i in range(1):
 
-    genotype_data = snakemake.input[i]
-    phenotype_data = snakemake.input[1]
-    output_file = snakemake.output[i]
+    genotype_data = snakemake.input[i] # type: ignore
+    phenotype_data = snakemake.input[1] # type: ignore
+    output_file = snakemake.output[i] # type: ignore
     #  Load genotype data as xarray, set samples as index for the join
     ds_genotype = sg.load_dataset(genotype_data)
     # ds_genotype = ds_genotype.set_index({"samples": "sample_id", 'variants': 'variant_id'})

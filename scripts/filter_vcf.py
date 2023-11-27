@@ -5,6 +5,12 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+input_zarr = snakemake.input[0] # type: ignore
+excel_file = snakemake.input[1] # type: ignore
+minimum_allele_count = snakemake.params["minimum_allele_count"] # type: ignore
+
+output_zarr = snakemake.output[0] # type: ignore
+
 def remove_heterozgous_variants(ds : xr.Dataset) -> xr.Dataset:
     
     # variables_to_drop = ['sample_n_called', 'sample_call_rate', 'sample_n_het', 'sample_n_hom_ref',
@@ -54,7 +60,7 @@ def filter_maximum_hetero(ds: xr.Dataset, maximum_hetero: int = 10_000) -> xr.Da
 #         )
 
 # Drop all variables with the ploidy dimension + variant_id_mask and reduce call_genotype to haploid
-ds = (sg.load_dataset(snakemake.input[0])
+ds = (sg.load_dataset(input_zarr) 
       .drop_vars(['call_genotype_mask', 'call_genotype_phased', 'variant_id_mask'])
       .assign(call_genotype = lambda ds: ds.call_genotype.max(dim='ploidy')))
 
@@ -63,7 +69,6 @@ ds = (sg.load_dataset(snakemake.input[0])
 ds['call_genotype'] = ds.call_genotype.expand_dims({'ploidy':1},2)
 ds['call_genotype_mask'] = xr.zeros_like(ds.call_genotype).astype(bool)
 
-excel_file = snakemake.input[1]
 
 # samples with beta_lactamase status negative and positive
 df_negative = pd.read_excel(excel_file, sheet_name='blac_negative').assign(AMP_MIC= lambda df: df['AMP_MIC'].replace('>8','8').astype('float'))
@@ -96,7 +101,7 @@ ds = (
     ds
     # .pipe(filter_maximum_hetero,10_000)
     # .pipe(remove_heterozgous_variants)
-    .pipe(filter_minimum_AC, 10)
+    .pipe(filter_minimum_AC, minimum_allele_count)
     .assign(variant_id=lambda ds: ( 'ID_' + ds.variant_position.to_series().astype(str) + '_' + ds.variant_allele[:,1].to_series()))
 )
 
@@ -128,7 +133,7 @@ ds = (
 
 
 # Save to zarr
-sg.save_dataset(ds, snakemake.output[0], auto_rechunk=True)
+sg.save_dataset(ds, output_zarr, auto_rechunk=True) # type: ignore
 # sg.save_dataset(ds_luebeck, snakemake.output[1], auto_rechunk=True)
 # sg.save_dataset(ds_wurzburg, snakemake.output[2], auto_rechunk=True)
 # sg.save_dataset(ds_portugal, snakemake.output[3], auto_rechunk=True)

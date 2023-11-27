@@ -2,8 +2,8 @@ import sgkit as sg
 import pandas as pd
 
 
-input = snakemake.input[0]
-output = snakemake.output[0]
+input = snakemake.input[0] # type: ignore
+output = snakemake.output[0] # type: ignore
 ds_linreg = sg.load_dataset(input)
 
 

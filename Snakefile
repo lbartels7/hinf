@@ -1,6 +1,8 @@
 import pandas as pd
 
 
+configfile: "config/config.yaml"
+
 IDS, = glob_wildcards("vcf_Haemophilus/HLR-{id}_151bp.gatk.vcf")
 ORIGIN = ['luebeck', 'wurzburg', 'portugal']
 
@@ -50,13 +52,18 @@ rule all:
             "results/linreg.csv",
             "results/linreg_logscaled.csv",
             "results/linreg_rankscaled.csv",
-            "results/logreg.csv"
+            "results/logreg.csv",
+            # "results/sigsnps_linreg.txt",
+            "results/sigsnps_linreg_logscaled.txt",
+            "results/sigsnps_linreg_rankscaled.txt",
+            "results/sigsnps_logreg.txt"
 
 
 rule extract_AMP_nonNAN:
     input: "vcf_Haemophilus/annotation_files/metadata_HLR_extern.xlsx"
     output: "results/samples_AMP_MIC_nonNAN.csv",
             "results/samples_AMP_nonNAN.csv"
+    params: maximum_mic=config["sample-filtering"]["maximum-mic"]
     script: "scripts/extract_sample_ids.py"
 
 
@@ -227,6 +234,8 @@ rule filter_heterozygous_calls_and_map:
         #     directory("results/zarrs/{name}_luebeck_temp.zarr"),
         #     directory("results/zarrs/{name}_wurzburg_temp.zarr"),
         #     directory("results/zarrs/{name}_portugal_temp.zarr"),
+    params: minimum_allele_count=config["variant-filtering"]["minimum-allele-count"]
+    conda: "envs/sgkit.yaml"
     script: "scripts/filter_vcf.py"
 
 rule output_for_r:
@@ -344,3 +353,18 @@ rule create_genotype_boxplot:
 #                             rowstr[i] = dip_to_hap[rowstr[i][:3]] + rowstr[i][3:]
 #                         row = '\t'.join(str(line).split('\t')[:9]) + '\t' + '\t'.join(rowstr)
 #                         s_file.write(row)
+
+
+rule extract_most_significant_snps_linreg:
+    input: "results/linreg{scaling}.csv"
+    output: "results/sigsnps_linreg{scaling}.txt"
+    shell: "cat {input[0]} | grep  nonsyn | cut -f 1,2,4,10,11,13  | grep CDS | cut -d _ -f 3 | head -n 53 | cut -f 4,5,9 | sort | uniq  | cut -f 1,2 > {output[0]}"
+
+
+
+
+
+rule extract_most_significant_snps_logreg:
+    input: "results/logreg.csv"
+    output: "results/sigsnps_logreg.txt"
+    shell: "cat {input[0]} | grep  nonsyn | cut -f 1,2,4,9,10,11 | grep CDS | cut -d _ -f 3 | head -n 53 | cut -f 4,5,9 | sort | uniq  | cut -f 1,2 > {output[0]}"

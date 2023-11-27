@@ -32,7 +32,7 @@ for (i in head(seq_along(df),-1))  {
   id = colnames(df)[i]
   pos <- strsplit(id,'_')[[1]][2]
   allele <- strsplit(id, '_')[[1]][3]
-  model <- lm(AMP_MI.rankscaled ~ get(id), df)
+  model <- lm(AMP_MIC.rankscaled ~ get(id), df)
   set(
     lin.reg.res,
     i = i,
