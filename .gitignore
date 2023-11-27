@@ -16,3 +16,6 @@ vcf_Haemophilus/
 /lintemp.txt
 /linscaledtemp.txt
 /logtemp.txt
+
+*.pdf
+*.svg
