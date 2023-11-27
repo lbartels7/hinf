@@ -96,7 +96,7 @@ ds = (
     ds
     # .pipe(filter_maximum_hetero,10_000)
     # .pipe(remove_heterozgous_variants)
-    .pipe(filter_minimum_AC, 3)
+    .pipe(filter_minimum_AC, 10)
     .assign(variant_id=lambda ds: ( 'ID_' + ds.variant_position.to_series().astype(str) + '_' + ds.variant_allele[:,1].to_series()))
 )
 

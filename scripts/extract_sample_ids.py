@@ -4,8 +4,8 @@ import pandas as pd
 excel_file = snakemake.input[0]
 
 # samples with beta_lactamase status negative and positive
-df_negative = pd.read_excel('metadata_HLR_extern.xlsx', sheet_name='blac_negative')
-df_positive = pd.read_excel('metadata_HLR_extern.xlsx', sheet_name='excluded_blac_positive')
+df_negative = pd.read_excel(excel_file, sheet_name='blac_negative')
+df_positive = pd.read_excel(excel_file, sheet_name='excluded_blac_positive')
 
 
 # Keep all samples with MIC values above a defined threshold

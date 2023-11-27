@@ -15,7 +15,7 @@ ORIGIN = ['luebeck', 'wurzburg', 'portugal']
 # container: "docker://continuumio/miniconda3"
 
 def get_all_blac_negative_ids():
-    df_negative = (pd.read_excel("metadata_HLR_extern.xlsx", sheet_name='blac_negative')
+    df_negative = (pd.read_excel("vcf_Haemophilus/annotation_files/metadata_HLR_extern.xlsx", sheet_name='blac_negative')
                         .dropna(subset='AMP_MIC')
                         .assign(AMP_MIC = lambda df: df['AMP_MIC'].replace('>8','8').astype('float'))
                         .query('AMP_MIC < 8')
@@ -46,12 +46,15 @@ rule all:
             "results/regression/linear_regression.csv",
             "results/regression/logistic_regression.csv",
             "results/zarrs/Hinf_norm_mic_linreg_results.zarr",
-            "results/zarrs/Hinf_norm_bin_logreg_results.zarr"
-            # "results/Hinf_norm_hap.vcf"
+            "results/zarrs/Hinf_norm_bin_logreg_results.zarr",
+            "results/linreg.csv",
+            "results/linreg_logscaled.csv",
+            "results/linreg_rankscaled.csv",
+            "results/logreg.csv"
 
 
 rule extract_AMP_nonNAN:
-    input: "metadata_HLR_extern.xlsx"
+    input: "vcf_Haemophilus/annotation_files/metadata_HLR_extern.xlsx"
     output: "results/samples_AMP_MIC_nonNAN.csv",
             "results/samples_AMP_nonNAN.csv"
     script: "scripts/extract_sample_ids.py"
@@ -109,13 +112,13 @@ rule rename_samples_in_distance_matrix:
 
 
 rule create_phenotypefile_pyseer:
-    input: "metadata_HLR_extern.xlsx"
+    input: "vcf_Haemophilus/annotation_files/metadata_HLR_extern.xlsx"
     output: "results/resistance_bin.pheno",
             "results/resistance_mic.pheno",
     run:
         import pandas as pd
 
-        df_negative = pd.read_excel('metadata_HLR_extern.xlsx', sheet_name='blac_negative')
+        df_negative = pd.read_excel(snakemake.input[0], sheet_name='blac_negative')
         (df_negative
             .dropna(subset=['AMP'])
             .rename(columns={'SampleID':'samples'})
@@ -219,7 +222,7 @@ rule create_zarr:
 
 rule filter_heterozygous_calls_and_map:
     input: "results/zarrs/{name}.zarr",
-            "metadata_HLR_extern.xlsx"
+            "vcf_Haemophilus/annotation_files/metadata_HLR_extern.xlsx"
     output: directory("results/zarrs/{name}_temp.zarr"),
         #     directory("results/zarrs/{name}_luebeck_temp.zarr"),
         #     directory("results/zarrs/{name}_wurzburg_temp.zarr"),
@@ -231,7 +234,7 @@ rule output_for_r:
             # "results/zarrs/{name}_luebeck_temp.zarr",
             # "results/zarrs/{name}_wurzburg_temp.zarr",
             # "results/zarrs/{name}_portugal_temp.zarr",
-            "metadata_HLR_extern.xlsx"
+            "vcf_Haemophilus/annotation_files/metadata_HLR_extern.xlsx"
     output: "results/feather/{name}.feather",
             # "results/feather/{name}_luebeck.feather",
             # "results/feather/{name}_wurzburg.feather",
@@ -255,6 +258,20 @@ rule linear_regression:
     conda: "envs/regression.yaml"
     script: "scripts/linear_regression.R"
 
+rule linear_regression_logscaled:
+    input: "results/feather/Hinf_norm_mic.feather",
+            "vcf_Haemophilus/annotation_files/Hinf_Rd-KW20v3_DSM11121_2023-06-15_genes_adjst.txt"
+    output: "results/regression/linear_regression_logscaled.csv"
+    conda: "envs/regression.yaml"
+    script: "scripts/linear_regression_logscaled.R"
+
+
+rule linear_regression_rankscaled:
+    input: "results/feather/Hinf_norm_mic.feather",
+            "vcf_Haemophilus/annotation_files/Hinf_Rd-KW20v3_DSM11121_2023-06-15_genes_adjst.txt"
+    output: "results/regression/linear_regression_rankscaled.csv"
+    conda: "envs/regression.yaml"
+    script: "scripts/linear_regression_rankscaled.R"
 
 rule logistic_regression:
     input: "results/feather/Hinf_norm_bin.feather",
@@ -274,9 +291,9 @@ rule create_position_to_mutation_mapping:
 
 rule create_final_linear_regression_result_object:
     input:  mapping="results/mapping.csv",
-            gwas_results="results/regression/linear_regression.csv",
+            gwas_results="results/regression/linear_regression{scaling}.csv",
             input_dataset="results/zarrs/Hinf_norm_mic_temp.zarr/"
-    output: directory("results/zarrs/Hinf_norm_mic_linreg_results.zarr")
+    output: directory("results/zarrs/Hinf_norm_mic_linreg{scaling}_results.zarr")
     conda: "envs/sgkit.yaml"
     script: "scripts/annotate_with_mutations.py" 
 
@@ -291,8 +308,8 @@ rule create_final_logistic_regression_result_object:
 
 
 rule create_results_table_linreg:
-    input: "results/zarrs/Hinf_norm_mic_linreg_results.zarr"
-    output: "results/linreg.csv"
+    input: "results/zarrs/Hinf_norm_mic_linreg{scaling}_results.zarr"
+    output: "results/linreg{scaling}.csv"
     conda: "envs/sgkit.yaml"
     script: "scripts/create_results_table_linreg.py"
 
