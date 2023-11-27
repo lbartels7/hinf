@@ -1,0 +1,14 @@
+name: regression
+channels:
+ - conda-forge
+ - r
+ - bioconda
+ - defaults
+dependencies:
+- r-base=4.3.1
+- r-dplyr
+- r-data.table
+- r-arrow
+- r-ape
+- bioconductor-iranges
+- r-RNOmni

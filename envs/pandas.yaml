@@ -1,0 +1,8 @@
+name: pandas
+channels:
+ - conda-forge
+ - bioconda
+ - defaults
+dependencies:
+- pandas=2.1.1
+- pyarrow
