@@ -33,7 +33,7 @@ rule all:
             # "results/mash.tsv",
             # "results/resistance_bin.pheno",
             # "results/resistance_mic.pheno",
-            # "results/penicillin_SNPs.txt",    
+            # "results/ampicillin_SNPs.txt",    
             "results/Hinf_norm_genes.vcf.gz",
             "results/Hinf_norm_mic.vcf.gz",
             "results/Hinf_norm_genes_mic.vcf.gz",
@@ -45,18 +45,18 @@ rule all:
             "results/feather/Hinf_norm_genes.feather",
             "results/feather/Hinf_norm_genes_mic.feather",
             "results/feather/Hinf_norm_genes_bin.feather",
-            "results/regression/linear_regression.csv",
-            "results/regression/logistic_regression.csv",
-            "results/zarrs/Hinf_norm_mic_linreg_results.zarr",
-            "results/zarrs/Hinf_norm_bin_logreg_results.zarr",
-            "results/linreg.csv",
+            # "results/regression/linear_regression.csv",
+            # "results/regression/logistic_regression.csv",
+            # "results/zarrs/Hinf_norm_mic_linreg_results.zarr",
+            # "results/zarrs/Hinf_norm_bin_logreg_results.zarr",
+            "results/linreg_unscaled.csv",
             "results/linreg_logscaled.csv",
             "results/linreg_rankscaled.csv",
             "results/logreg.csv",
-            # "results/sigsnps_linreg.txt",
-            "results/sigsnps_linreg_logscaled.txt",
-            "results/sigsnps_linreg_rankscaled.txt",
-            "results/sigsnps_logreg.txt"
+            # "results/sigsnps_linreg_unscaled.txt",
+            # "results/sigsnps_linreg_logscaled.txt",
+            # "results/sigsnps_linreg_rankscaled.txt",
+            # "results/sigsnps_logreg.txt"
 
 
 rule extract_AMP_nonNAN:
@@ -96,40 +96,44 @@ rule create_consensus:
     input: vcf="results/vcf/{id}.gatk.vcf.gz",
             index="results/vcf/{id}.gatk.vcf.gz.tbi",
             fasta="vcf_Haemophilus/annotation_files/Hinf_Rd-KW20v3_DSM11121_2023-06-15.fasta"
-    output: "results/consensus/{id}.fa"
+    output: "results/pyseer/consensus/{id}.fa"
     shell: "bcftools consensus -H R -f {input.fasta} {input.vcf} > {output}"
 
 rule create_sketch:
-    input: expand("results/consensus/{id}.fa", id=get_all_blac_negative_ids())
-    output: "results/samples.msh"
-    conda: "envs/pyseer.yaml"
+    input: expand("results/pyseer/consensus/{id}.fa", id=get_all_blac_negative_ids())
+    output: "results/pyseer/samples.msh"
+    # conda: "envs/pyseer.yaml"
     shell: "mash sketch -s 1000 -o {output} {input}"
 
 rule create_distance_matrix:
-    input: "results/samples.msh"
-    output: "results/mash.tsv"
+    input: "results/pyseer/samples.msh"
+    output: "results/pyseer/mash.tsv"
     conda: "envs/pyseer.yaml"
     shell: "mash dist {input} {input} | square_mash > {output}"
 
 rule rename_samples_in_distance_matrix:
-    input: "results/mash.tsv"
-    output: "results/mash_normed.tsv"
+    input: "results/pyseer/mash.tsv"
+    output: "results/pyseer/mash_normed.tsv"
     conda: "envs/pandas.yaml"
     script: "scripts/rename_samples_in_distance_matrix.py"
 
 
 rule create_phenotypefile_pyseer:
     input: "vcf_Haemophilus/annotation_files/metadata_HLR_extern.xlsx"
-    output: "results/resistance_bin.pheno",
-            "results/resistance_mic.pheno",
+    output: "results/pyseer/resistance_bin.pheno",
+            "results/pyseer/resistance_mic.pheno",
+            "results/pyseer/resistance_mic_log2.pheno"
     run:
         import pandas as pd
-
-        df_negative = pd.read_excel(snakemake.input[0], sheet_name='blac_negative')
+        import numpy as np
+        ll = ['HLR-453', 'HLR-503', 'HLR-513']
+        df_negative = pd.read_excel(input[0], sheet_name='blac_negative')
         (df_negative
             .dropna(subset=['AMP'])
             .rename(columns={'SampleID':'samples'})
             .replace(['S','R'],[0,1])
+            .query('samples != "HLR-103"')
+            .query('samples not in @ll')
             [['samples', 'AMP']]
             .to_csv(output[0], sep='\t', index=False)
         )
@@ -139,27 +143,134 @@ rule create_phenotypefile_pyseer:
             .rename(columns={'SampleID':'samples'})
             .replace('>8','8')
             .astype({'AMP_MIC': 'float'})
-            .query('AMP_MIC < 8')
+            .query('AMP_MIC <= 8')
             .query('samples != "HLR-103"')
+            .query('samples not in @ll')
             [['samples', 'AMP_MIC']]
             .to_csv(output[1], sep='\t', index=False)
         )
+
+        (df_negative
+            .dropna(subset=['AMP_MIC'])
+            .rename(columns={'SampleID':'samples'})
+            .replace('>8','8')
+            .astype({'AMP_MIC': 'float'})
+            .query('AMP_MIC <= 8')
+            .query('samples != "HLR-103"')
+            .query('samples not in @ll')
+            .assign(AMP_MIC= lambda x: np.log2(x['AMP_MIC']))
+            [['samples', 'AMP_MIC']]
+            .to_csv(output[2], sep='\t', index=False)
+        )
+
+rule pyseer_create_covariate_files:
+    input: "vcf_Haemophilus/annotation_files/metadata_HLR_extern.xlsx"
+    output: "results/pyseer/covariates_bin.txt",
+            "results/pyseer/covariates_mic.txt",
+    run:
+        import pandas as pd
+        import numpy as np
+
+        df_negative = pd.read_excel(input[0], sheet_name='blac_negative')
+        ll = ['HLR-453', 'HLR-503', 'HLR-513']
+
+        (df_negative
+            .dropna(subset=['AMP'])
+            .rename(columns={'SampleID':'samples'})
+            .query('samples not in @ll')
+            [['samples', 'origin']]
+            .to_csv(output[0], sep='\t', index=False)
+        )
+
+        (df_negative
+            .dropna(subset=['AMP_MIC'])
+            .rename(columns={'SampleID':'samples'})
+            .replace('>8','8')
+            .astype({'AMP_MIC': 'float'})
+            .query('AMP_MIC <= 8')
+            .query('samples != "HLR-103"')
+            .query('samples not in @ll')
+            [['samples', 'origin']]
+            .to_csv(output[1], sep='\t', index=False)
+        )
+
+
 
 # pyseer only uses samples that are present in the phenotypefile, it can filter according to maf, and
 # 1/1 0/1 1/0 is interpreted as 1 everthing else as 0
 rule pyseer_mic:
     input:  vcf="results/Hinf_norm_temp.vcf",
-            pheno="results/resistance_mic.pheno",
-            dist="results/mash_normed.tsv"
-    output: "results/penicillin_SNPs.txt"
+            pheno="results/pyseer/resistance_mic.pheno",
+            dist="results/pyseer/mash_normed.tsv"
+    output: "results/pyseer/ampicillin_SNPs.txt"
     conda: "envs/pyseer.yaml"
     shell: "pyseer --phenotypes {input.pheno} --vcf {input.vcf} --distances {input.dist} --max-dimensions 7 --min-af 0.05 --max-af 0.95 > {output}"
 
 # rule create_pyseer_plot:
-#     input: "results/penicillin_SNPs.txt"
-#     output: "results/penicillin_snps.plot"
-#     shell: "cat <(echo "#CHR SNP BP minLOG10(P) log10(p) r^2") <(paste <(sed '1d' penicillin_SNPs.txt | cut -d "_" -f 3) <(sed '1d' penicillin_SNPs.txt | cut -f 4) | awk '{p = -log($2)/log(10); print "26",".",$1,p,p,"0"}' ) | tr ' ' '\t' > penicillin_snps.plot"
+#     input: "results/ampicillin_SNPs.txt"
+#     output: "results/ampicillin_snps.plot"
+#     shell: "cat <(echo "#CHR SNP BP minLOG10(P) log10(p) r^2") <(paste <(sed '1d' ampicillin_SNPs.txt | cut -d "_" -f 3) <(sed '1d' ampicillin_SNPs.txt | cut -f 4) | awk '{p = -log($2)/log(10); print "26",".",$1,p,p,"0"}' ) | tr ' ' '\t' > ampicillin_snps.plot"
 
+rule pyseer_samples_for_kinship:
+    input: mic="results/pyseer/resistance_mic_log2.pheno",
+            bin="results/pyseer/resistance_bin.pheno"
+    output: mic="results/pyseer/samples_mic.txt",
+            bin="results/pyseer/samples_bin.txt"
+    shell: 
+            """
+            cat {input.mic} | cut -f 1 | tail -n +2 > {output.mic}
+            cat {input.bin} | cut -f 1 | tail -n +2 > {output.bin}    
+            """
+
+
+rule pyseer_kinship_matrix:
+    input: vcf="results/Hinf_norm_temp.vcf",
+            samples_mic= "results/pyseer/samples_mic.txt",
+            samples_bin= "results/pyseer/samples_bin.txt"
+    output: kinship_mic="results/pyseer/genotype_kinship_mic.tsv",
+            kinship_bin="results/pyseer/genotype_kinship_bin.tsv"
+    conda: "envs/pyseer.yaml"
+    shell: 
+            """
+            similarity_pyseer --vcf {input.vcf} {input.samples_mic} > {output.kinship_mic}
+            similarity_pyseer --vcf {input.vcf} {input.samples_bin} > {output.kinship_bin}
+            """
+
+
+rule pyseer_lmm_mic_log2:
+    input: pheno="results/pyseer/resistance_mic_log2.pheno",
+            vcf="results/Hinf_norm_temp.vcf",
+            kinship="results/pyseer/genotype_kinship_mic.tsv",
+            covariates="results/pyseer/covariates_mic.txt"
+    output:
+            "results/pyseer/ampicillin_snps_mic_log2.txt"
+    conda: "envs/pyseer.yaml"
+    shell: "pyseer --lmm --phenotypes {input.pheno} --vcf {input.vcf} --similarity {input.kinship} --covariates {input.covariates} --use-covariates 2 --min-af 0.03775 --max-af 0.96225 > {output}"  # based on sample size 267 
+
+rule pyseer_lmm_mic_bin:
+    input: pheno="results/pyseer/resistance_bin.pheno",
+            vcf="results/Hinf_norm_temp.vcf",
+            kinship="results/pyseer/genotype_kinship_bin.tsv",
+            covariates="results/pyseer/covariates_bin.txt"
+    output:
+            "results/pyseer/ampicillin_snps_bin.txt"
+    conda: "envs/pyseer.yaml"
+    shell: "pyseer --lmm --phenotypes {input.pheno} --vcf {input.vcf} --similarity {input.kinship} --covariates {input.covariates} --use-covariates 2 --min-af 0.03106 --max-af 0.96894 > {output}" # based on sample size 326
+
+
+rule pyseer_annotate_results_with_geneinformation:
+    input: gwas="results/pyseer/ampicillin_snps_mic_log2.txt",
+            genes="vcf_Haemophilus/annotation_files/Hinf_Rd-KW20v3_DSM11121_2023-06-15_genes_adjst.txt"
+    output: "results/pyseer/ampicillin_snps_mic_log2_genes.txt"
+    conda: "envs/regression.yaml"
+    script: "scripts/annotate_with_genes.R"
+
+rule pyseer_annotate_results_with_geneinformation2:
+    input: gwas="results/pyseer/ampicillin_snps_bin.txt",
+            genes="vcf_Haemophilus/annotation_files/Hinf_Rd-KW20v3_DSM11121_2023-06-15_genes_adjst.txt"
+    output: "results/pyseer/ampicillin_snps_bin_genes.txt"
+    conda: "envs/regression.yaml"
+    script: "scripts/annotate_with_genes.R"
 
 rule merge_vcfs:
     input:
@@ -217,7 +328,7 @@ rule filter_samples_genes:
             && bcftools view -S {input[2]} --force-samples {input[0]} -Oz -o {output[1]}; \
             tabix -p vcf {output[0]}; tabix -p vcf {output[1]}"
 
-rule create_zarr:
+rule create_zarrs:
     input: "results/{name}.vcf.gz"
     output: directory("results/zarrs/{name}.zarr")
     run: 
@@ -263,7 +374,7 @@ rule zarr_to_vcf:
 rule linear_regression:
     input: "results/feather/Hinf_norm_mic.feather",
             "vcf_Haemophilus/annotation_files/Hinf_Rd-KW20v3_DSM11121_2023-06-15_genes_adjst.txt"
-    output: "results/regression/linear_regression.csv"
+    output: "results/regression/linear_regression_unscaled.csv"
     conda: "envs/regression.yaml"
     script: "scripts/linear_regression.R"
 
@@ -291,9 +402,11 @@ rule logistic_regression:
 
 # Additionally save the original file as feather
 rule create_position_to_mutation_mapping:
-    input: "vcf_Haemophilus/annotation_files/Hflu_association_data_cf4_cr4_fr75_ph8_l0_x0_271_combined_amended_u95_phylo.csv"
+    # input: "vcf_Haemophilus/annotation_files/Hflu_association_data_cf4_cr4_fr75_ph8_l0_x0_271_combined_amended_u95_phylo.csv"
+    input: "vcf_Haemophilus/annotation_files/HLR_final_logreg_cf4_cr4_fr75_ph8_l0_x1_322_combined_amended.csv"
     output: "results/mapping.csv",
-            "results/Hflu_association_data_cf4_cr4_fr75_ph8_l0_x0_271_combined_amended_u95_phylo.feather"
+            "results/HLR_final_logreg_cf4_cr4_fr75_ph8_l0_x1_322_combined_amended.feather"
+            # "results/Hflu_association_data_cf4_cr4_fr75_ph8_l0_x0_271_combined_amended_u95_phylo.feather"
     conda: "envs/pandas.yaml"
     script: "scripts/create_position_to_mutation_mapping.py" 
 

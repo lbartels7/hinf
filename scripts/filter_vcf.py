@@ -71,10 +71,17 @@ ds['call_genotype_mask'] = xr.zeros_like(ds.call_genotype).astype(bool)
 
 
 # samples with beta_lactamase status negative and positive
-df_negative = pd.read_excel(excel_file, sheet_name='blac_negative').assign(AMP_MIC= lambda df: df['AMP_MIC'].replace('>8','8').astype('float'))
+df_negative = (pd.read_excel(excel_file, sheet_name='blac_negative')
+               .assign(AMP_MIC= lambda df: df['AMP_MIC'].replace('>8','8').astype('float'))
+)
 # df_positive = pd.read_excel(excel_file, sheet_name='excluded_blac_positive').assign(AMP_MIC= lambda df: df['AMP_MIC'].replace(['>8', '>256'],['8', '256']).astype('float'))
 
-ds_negative = df_negative.to_xarray().rename({"SampleID":"samples"}).swap_dims({'index': 'samples'}).drop(labels='index')
+ds_negative = (df_negative
+               .to_xarray()
+               .rename({"SampleID":"samples"})
+               .swap_dims({'index': 'samples'})
+               .drop(labels='index')
+)
 ds = ds.set_index({"samples": "sample_id"})
 ds = ds.merge(ds_negative, join="left")
 

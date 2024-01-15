@@ -12,3 +12,4 @@ dependencies:
 - r-ape
 - bioconductor-iranges
 - r-RNOmni
+- r-stringr

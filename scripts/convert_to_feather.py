@@ -17,7 +17,9 @@ for i in range(1):
     ds_genotype = ds_genotype.set_index({'variants': 'variant_id', 'samples': 'sample_id'})
 
 
-    df_negative = pd.read_excel(phenotype_data, sheet_name='blac_negative', index_col="SampleID")
+    df_negative = (pd.read_excel(phenotype_data, sheet_name='blac_negative', index_col="SampleID")
+                   .assign(AMP_MIC = lambda df: df['AMP_MIC'].replace('>8','8').astype('float'))
+    )
     # df_positive = pd.read_excel(phenotype_data, sheet_name='excluded_blac_positive', index_col="SampleID")
 
 
