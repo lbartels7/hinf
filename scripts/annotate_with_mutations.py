@@ -12,7 +12,7 @@ ds_input = sg.load_dataset(snakemake.input[2]) # genotype information etc. # typ
 df_gwas_mutation = (pd.merge(df_gwas, df_mapping, how='left', on='id', validate='one_to_one')
         .drop(columns=['position']) # 'pvalue', 'p_values.adj', 'effect', 'r.squared', 'adj.r.squared', 'mutation'
 )
-# could be a mistake, maybee I wanted to remove the whole column instead
+# could be a mistake, maybe I wanted to remove the whole column instead
 # df_gwas_mutation = df_gwas_mutation.dropna(subset='allele')
 
 

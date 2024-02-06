@@ -1,5 +1,6 @@
 import pandas as pd
-# import snakemake
+
+
 
 excel_file = snakemake.input[0] # type: ignore
 maximum_mic = snakemake.params["maximum_mic"] # type: ignore
