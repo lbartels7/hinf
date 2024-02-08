@@ -11,6 +11,7 @@ logs/
 test/
 feather/
 vcf_Haemophilus/
+notebooks/
 
 /stats.xlsx
 /lintemp.txt
