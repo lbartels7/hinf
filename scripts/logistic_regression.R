@@ -47,19 +47,20 @@ for (i in head(seq_along(df),-1))  {
 
 
 
-# create plots ------------------------------------------------------------
 
+
+# Annotate variants with gene information
 
 genes <- read.csv(snakemake@input[[2]], sep = '\t')
 
 gene.ranges <- with(genes, IRanges(start_adjst, end_adjst))
 zone.ind <- findOverlaps(log.reg.res$pos, gene.ranges, select="arbitrary")
-# log.reg.res$gene <- genes$attributes[zone.ind]
+
 log.reg.res$gene.name <- genes$name[zone.ind]
 log.reg.res$gene.product <- genes$product[zone.ind]
 log.reg.res$gene.type <- genes$type[zone.ind]
 
-# log.reg.res$p_values.adj <- -log(p.adjust(log.reg.res$pvalue, method = "fdr", n = length(log.reg.res$pvalue)),10)
+
 log.reg.res$p_values.adj <- p.adjust(log.reg.res$pvalue, method = "fdr", n = length(log.reg.res$pvalue))
 
 write.csv(log.reg.res, snakemake@output[[1]])

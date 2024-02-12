@@ -8,10 +8,10 @@ library(RNOmni)
 
 
 df <- read_feather(snakemake@input[[1]])
-# df["AMP_MIC"][df["AMP_MIC"] == '>8'] <- '8'
+
 df$AMP_MIC <- as.numeric(df$AMP_MIC)
-# df <- df[df$AMP_MIC < 200,]
-# df$AMP_MIC.rankscaled <- RankNorm(df$AMP_MIC)
+
+
 df <- subset(df, select = -c(FullID, Perc.ReadsMapped, CoverageMappedReads,
                              origin, AMP, serotype, beta_lactamase, samples))
 n_variants = length(df) -1 
@@ -50,20 +50,18 @@ for (i in head(seq_along(df),-1))  {
 }
 
 
-# create plots ------------------------------------------------------------
 
 
-
+# Annotate variants with gene information
 genes <- read.csv(snakemake@input[[2]], sep = '\t')
 
 gene.ranges <- with(genes, IRanges(start_adjst, end_adjst))
 zone.ind <- findOverlaps(lin.reg.res$pos, gene.ranges, select="arbitrary")
-# lin.reg.res$gene <- genes$attributes[zone.ind]
 lin.reg.res$gene.name <- genes$name[zone.ind]
 lin.reg.res$gene.product <- genes$product[zone.ind]
 lin.reg.res$gene.type <- genes$type[zone.ind]
 
-# lin.reg.res$p_values.adj <- -log(p.adjust(lin.reg.res$pvalue, method = "fdr", n = length(lin.reg.res$pvalue)),10)
+
 lin.reg.res$p_values.adj <- p.adjust(lin.reg.res$pvalue, method = "fdr", n = length(lin.reg.res$pvalue))
 
 write.csv(lin.reg.res, snakemake@output[[1]])
