@@ -1,4 +1,5 @@
 name: bcftools
+subdir: osx-64
 channels:
  - bioconda
 dependencies:

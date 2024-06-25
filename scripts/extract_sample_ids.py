@@ -12,21 +12,27 @@ output_csv_amp = snakemake.output[1] # type: ignore
 df_negative = pd.read_excel(excel_file, sheet_name='blac_negative')
 df_positive = pd.read_excel(excel_file, sheet_name='excluded_blac_positive')
 
-ll = ['HLR-453', 'HLR-503', 'HLR-513']
+# Isolates that harbor bla genes, identified in hindsight
+bla_pos = ['HLR-453', 'HLR-503', 'HLR-513']
 # Keep all samples with MIC values above a defined threshold
 df_amp_mic = (df_negative
               .dropna(subset='AMP_MIC')
               .assign(AMP_MIC = lambda df: df['AMP_MIC'].replace('>8','8').astype('float'))
             #   .query('AMP_MIC < ' + str(MAXIMUM_MIC))
               .query('AMP_MIC <= @maximum_mic')
-              .query('SampleID not in @ll')
+              .query("origin != 'Portugal'")
+              .query('SampleID not in @bla_pos')
 )
 
 IDs_mic = df_amp_mic.SampleID
 IDs_mic.to_csv(output_csv_mic, index=False, header=False) # type: ignore
 
 # Keep all samples with resistance status
-df_amp_binary = df_negative.dropna(subset='AMP').query('SampleID not in @ll')
+df_amp_binary = (df_negative
+                 .dropna(subset='AMP')
+                 .query("origin != 'Portugal'")
+                 .query('SampleID not in @bla_pos')
+)
 IDs_binary = df_amp_binary.SampleID
 IDs_binary.to_csv(output_csv_amp, index=False, header=False) # type: ignore
 

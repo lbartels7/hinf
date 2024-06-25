@@ -5,3 +5,5 @@ variant-filtering:
 
 sample-filtering:
   maximum-mic: 8
+
+output-dir: "results-revision"

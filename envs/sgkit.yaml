@@ -16,5 +16,6 @@ dependencies:
 - fsspec != 2021.6.*
 - scikit-learn
 - pandas
+- openpyxl=3.1.4
 - pip:
   - sgkit[vcf]

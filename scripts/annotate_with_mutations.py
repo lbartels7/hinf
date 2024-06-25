@@ -7,7 +7,7 @@ ds_input = sg.load_dataset(snakemake.input[2]) # genotype information etc. # typ
 
 
 
-# Merging the gwas resulst with the mapping table on the id (id is {position}_{alternative allele}), so we have
+# Merging the gwas resulst with the mapping table on the id (id is ID_{position}_{alternative allele}), so we have
 # the corresponding mutations for each SNP
 df_gwas_mutation = (pd.merge(df_gwas, df_mapping, how='left', on='id', validate='one_to_one')
         .drop(columns=['position']) # 'pvalue', 'p_values.adj', 'effect', 'r.squared', 'adj.r.squared', 'mutation'
