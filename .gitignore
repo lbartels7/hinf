@@ -7,6 +7,7 @@
 .vscode/
 
 results/
+results-revision/
 logs/
 test/
 feather/
