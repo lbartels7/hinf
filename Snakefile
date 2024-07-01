@@ -310,7 +310,7 @@ rule create_position_to_mutation_mapping:
     script:
         "scripts/create_position_to_mutation_mapping.py"
 
-
+# Rule inheritance maybe
 rule create_final_linear_regression_result_object:
     input:
         mapping=outdir + "/mapping.csv",
@@ -336,7 +336,7 @@ rule create_final_logistic_regression_result_object:
     script:
         "scripts/annotate_with_mutations.py"
 
-
+# Rule inheritance
 rule create_results_table_linreg:
     input:
         outdir + "/zarrs/Hinf_norm_mic_linreg{scaling}_results.zarr",
@@ -358,7 +358,7 @@ rule create_results_table_logreg:
     script:
         "scripts/create_results_table_logreg.py"
 
-
+# Rule inheritance
 rule extract_most_significant_snps_linreg:
     input:
         outdir + "/linreg{scaling}.csv",
@@ -377,8 +377,15 @@ rule extract_most_significant_snps_logreg:
         "cat {input[0]} | grep  nonsyn | cut -f 1,2,4,9,10,11 | grep CDS | cut -d _ -f 3 | head -n 53 | cut -f 4,5,9 | sort | uniq  | cut -f 1,2 > {output[0]}"
 
 
-# rule create_plots__notebook:
-# input: outdir+"/zarrs/Hinf_norm_mic_linreg_logscaled_results.zarr/",
-# outdir+"../results/zarrs/Hinf_norm_mic_linreg_logscaled_results.zarr/"
-# conda: "envs/plots.yaml"
-# notebook: "notebooks/plots.py.ipynb"
+rule create_plots_notebook:
+    input:
+        outdir + "/zarrs/Hinf_norm_mic_linreg_logscaled_results.zarr/",
+        outdir + "/zarrs/Hinf_norm_bin_logreg_results.zarr/",
+        outdir + "/linreg_logscaled.csv",
+        outdir + "/logreg.csv"
+    log:
+        notebook="logs/notebooks/processed_plots_notebook.ipynb"
+    conda:
+        "envs/plots.yaml"
+    notebook:
+        "notebooks/plots.py.ipynb"

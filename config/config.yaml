@@ -6,4 +6,4 @@ variant-filtering:
 sample-filtering:
   maximum-mic: 8
 
-output-dir: "results-revision"
+output-dir: "results-revision-portugal"

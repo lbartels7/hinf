@@ -20,7 +20,7 @@ df_amp_mic = (df_negative
               .assign(AMP_MIC = lambda df: df['AMP_MIC'].replace('>8','8').astype('float'))
             #   .query('AMP_MIC < ' + str(MAXIMUM_MIC))
               .query('AMP_MIC <= @maximum_mic')
-              .query("origin != 'Portugal'")
+              .query("origin == 'Portugal'")
               .query('SampleID not in @bla_pos')
 )
 
@@ -30,7 +30,7 @@ IDs_mic.to_csv(output_csv_mic, index=False, header=False) # type: ignore
 # Keep all samples with resistance status
 df_amp_binary = (df_negative
                  .dropna(subset='AMP')
-                 .query("origin != 'Portugal'")
+                 .query("origin == 'Portugal'")
                  .query('SampleID not in @bla_pos')
 )
 IDs_binary = df_amp_binary.SampleID
