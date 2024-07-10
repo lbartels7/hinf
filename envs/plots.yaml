@@ -1,0 +1,24 @@
+name: sgkit
+channels:
+ - conda-forge
+ - bioconda
+ - defaults
+dependencies:
+- numpy
+- xarray
+- dask[array] >= 2023.01.0
+- distributed >= 2023.01.0
+- dask-ml
+- scipy
+- typing-extensions
+- numba
+- zarr >= 2.10.0, != 2.11.0, != 2.11.1, != 2.11.2
+- fsspec != 2021.6.*
+- scikit-learn
+- pandas
+- openpyxl=3.1.4
+- plotly
+- jupyterlab
+- seaborn
+- pip:
+  - sgkit[vcf]
