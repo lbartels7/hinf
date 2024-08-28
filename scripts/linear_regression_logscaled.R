@@ -10,8 +10,10 @@ library(RNOmni)
 df <- read_feather(snakemake@input[[1]])
 df$AMP_MIC <- as.numeric(df$AMP_MIC)
 df$AMP_MIC.logscaled <- log(df$AMP_MIC,2)
-df <- subset(df, select = -c(FullID, Perc.ReadsMapped, CoverageMappedReads,
-                             origin, AMP, serotype, beta_lactamase, samples, AMP_MIC))
+df <- subset(df, select = -c(samples, Institute, HaemoSeq_species, HaemoSeq_serotype,
+       SequenceType, beta_lactamase, AMP, AMP_MIC, group, Haplotype, perc_reads_mapped,
+       coverage_mapped_reads, libID, Bioproject, AccessionNumber,
+       BioSample))
 n_variants = length(df) -1 
 
 lin.reg.res <- data.table(
@@ -59,6 +61,7 @@ zone.ind <- findOverlaps(lin.reg.res$pos, gene.ranges, select="arbitrary")
 lin.reg.res$gene.name <- genes$name[zone.ind]
 lin.reg.res$gene.product <- genes$product[zone.ind]
 lin.reg.res$gene.type <- genes$type[zone.ind]
+lin.reg.res$gene.id <- genes$X..ID[zone.ind]
 
 # lin.reg.res$p_values.adj <- -log(p.adjust(lin.reg.res$pvalue, method = "fdr", n = length(lin.reg.res$pvalue)),10)
 lin.reg.res$p_values.adj <- p.adjust(lin.reg.res$pvalue, method = "fdr", n = length(lin.reg.res$pvalue))

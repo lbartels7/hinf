@@ -10,8 +10,10 @@ library(RNOmni)
 df <- read_feather(snakemake@input[[1]])
 df$AMP_MIC <- as.numeric(df$AMP_MIC)
 df$AMP_MIC.rankscaled <- RankNorm(df$AMP_MIC)
-df <- subset(df, select = -c(FullID, Perc.ReadsMapped, CoverageMappedReads,
-                             origin, AMP, serotype, beta_lactamase, samples, AMP_MIC))
+df <- subset(df, select = -c(samples, Institute, HaemoSeq_species, HaemoSeq_serotype,
+       SequenceType, beta_lactamase, AMP, AMP_MIC, group, Haplotype, Perc.reads.mapped,
+       coverage.mapped.reads, libID, Bioproject, AccessionNumber,
+       BioSample))
 n_variants = length(df) -1 
 
 lin.reg.res <- data.table(

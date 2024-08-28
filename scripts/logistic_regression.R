@@ -7,8 +7,10 @@
 
   df <- read_feather(snakemake@input[[1]])
   df$AMP <- as.factor(df$AMP)
-  df <- subset(df, select = -c(FullID, Perc.ReadsMapped, CoverageMappedReads,
-                               origin, AMP_MIC, serotype, beta_lactamase, samples))
+  df <- subset(df, select = -c(samples, Institute, HaemoSeq_species, HaemoSeq_serotype,
+       SequenceType, beta_lactamase, AMP_MIC, group, Haplotype, perc_reads_mapped,
+       coverage_mapped_reads, libID, Bioproject, AccessionNumber,
+       BioSample))
 
 
 n_variants = length(df) -1 
@@ -59,6 +61,7 @@ zone.ind <- findOverlaps(log.reg.res$pos, gene.ranges, select="arbitrary")
 log.reg.res$gene.name <- genes$name[zone.ind]
 log.reg.res$gene.product <- genes$product[zone.ind]
 log.reg.res$gene.type <- genes$type[zone.ind]
+log.reg.res$gene.id <- genes$X..ID[zone.ind]
 
 
 log.reg.res$p_values.adj <- p.adjust(log.reg.res$pvalue, method = "fdr", n = length(log.reg.res$pvalue))

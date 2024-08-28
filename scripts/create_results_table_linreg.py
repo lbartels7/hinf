@@ -7,7 +7,7 @@ output = snakemake.output[0] # type: ignore
 ds_linreg = sg.load_dataset(input)
 
 
-df_variants = (ds_linreg[['variants', 'variant_position', 'variant_quality', 'pvalue', 'p_values.adj', 'mutation', 'r.squared', 'adj.r.squared', 'effect',  'gene.name', 'gene.product', 'gene.type']]
+df_variants = (ds_linreg[['variants', 'variant_position', 'variant_quality', 'pvalue', 'p_values.adj', 'mutation', 'r.squared', 'adj.r.squared', 'effect',  'gene.name', 'gene.product', 'gene.type', 'gene.id']]
             .to_pandas()
             .assign(mutation_type= lambda df: ((df['mutation'] == '') | (df['mutation'].str.split().str[0].str[0] == df['mutation'].str.split().str[0].str[-1]))
                     .apply(lambda x: 'synonymous' if x else 'nonsynonymous'))

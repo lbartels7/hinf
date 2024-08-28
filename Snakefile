@@ -6,8 +6,17 @@ configfile: "config/config.yaml"
 
 (IDS,) = glob_wildcards("vcf_Haemophilus/HLR-{id}_151bp.gatk.vcf")
 ORIGIN = ["luebeck", "wurzburg", "portugal"]
-
 outdir = config["output-dir"]
+
+IDS_gwas = pd.read_csv('vcf_Haemophilus/annotation_files/HLR-metadata-298.tsv', sep='\t')['libID'].to_list()
+(A,B,C,) = glob_wildcards('vcf_Haemophilus/{libid}_{machine}_{bla}_151bp.gatk.vcf')
+IDS_gwas = ['_'.join(i) for i in zip(A,B,C) if i[0] in IDS_gwas]
+
+IDS_all = pd.read_csv('vcf_Haemophilus/annotation_files/HLR-metadata-322.tsv', sep='\t')['libID'].to_list()
+(A,B,C,) = glob_wildcards('vcf_Haemophilus/{libid}_{machine}_{bla}_151bp.gatk.vcf')
+IDS_all = ['_'.join(i) for i in zip(A,B,C) if i[0] in IDS_all]
+
+# print(IDS_all)
 
 # import pandas as pd
 # df_negative = (pd.read_excel('metadata_HLR_extern.xlsx', sheet_name='blac_negative')
@@ -20,16 +29,17 @@ outdir = config["output-dir"]
 # container: "docker://continuumio/miniconda3"
 
 
+
+
 def get_all_blac_negative_ids():
     df_negative = (
-        pd.read_excel(
-            "vcf_Haemophilus/annotation_files/metadata_HLR_extern.xlsx",
-            sheet_name="blac_negative",
+        pd.read_csv(
+            "vcf_Haemophilus/annotation_files/HLR-metadata-322.tsv", sep='\t'
         )
         .dropna(subset="AMP_MIC")
         .assign(AMP_MIC=lambda df: df["AMP_MIC"].replace(">8", "8").astype("float"))
         .query("AMP_MIC < 8")
-        .query('SampleID != "HLR-103"')
+        # .query('SampleID != "HLR-103"')
     )
     return (df_negative["FullID"]).tolist()
 
@@ -55,11 +65,24 @@ rule all:
         outdir + "/linreg_logscaled.csv",
         # outdir+"/linreg_rankscaled.csv",
         outdir + "/logreg.csv",
+        # expand("test/vcf_paper/compressed/{id}_151bp.gatk.vcf.gz", id=IDS_all)
+
+# rule cp_vcf:
+#     input: expand("vcf_Haemophilus/{id}_151bp.gatk.vcf", id=IDS_all)
+#     output: expand("test/vcf_paper/{id}_151bp.gatk.vcf", id=IDS_all)
+#     params: dir="test/vcf_paper/"
+#     shell: "cp {input} {params.dir}"
+
+# rule comp:
+#     input: "test/vcf_paper/{id}_151bp.gatk.vcf"
+#     output: "test/vcf_paper/compressed/{id}_151bp.gatk.vcf.gz"
+#     shell:  "bgzip -c {input[0]} > {output[0]}"
+
 
 
 rule extract_AMP_nonNAN:
     input:
-        "vcf_Haemophilus/annotation_files/metadata_HLR_extern.xlsx",
+        "vcf_Haemophilus/annotation_files/HLR-metadata-298.tsv",
     output:
         outdir + "/samples_AMP_MIC_nonNAN.csv",
         outdir + "/samples_AMP_nonNAN.csv",
@@ -105,6 +128,11 @@ rule calculate_statistics:
                         + "\n"
                     )
 
+use rule calculate_statistics as calculate_statistics_gwas_cohort with:
+    input:
+        expand("vcf_Haemophilus/{id}_151bp.gatk.vcf", id=IDS_gwas)
+    output:
+        outdir + "/stats_gwas.tsv"
 
 rule vcf_to_vcfgz:
     input:
@@ -204,12 +232,10 @@ rule create_zarrs:
 rule filter_heterozygous_calls_and_map:
     input:
         outdir + "/zarrs/{name}.zarr",
-        "vcf_Haemophilus/annotation_files/metadata_HLR_extern.xlsx",
+        "vcf_Haemophilus/annotation_files/HLR-metadata-298.tsv",
+        "vcf_Haemophilus/annotation_files/amended_positions.txt"
     output:
         directory(outdir + "/zarrs/{name}_temp.zarr"),
-    #     directory(outdir+"/zarrs/{name}_luebeck_temp.zarr"),
-    #     directory(outdir+"/zarrs/{name}_wurzburg_temp.zarr"),
-    #     directory(outdir+"/zarrs/{name}_portugal_temp.zarr"),
     params:
         minimum_allele_count=config["variant-filtering"]["minimum-allele-count"],
     conda:
@@ -221,15 +247,9 @@ rule filter_heterozygous_calls_and_map:
 rule output_for_r:
     input:
         outdir + "/zarrs/{name}_temp.zarr",
-        # outdir+"/zarrs/{name}_luebeck_temp.zarr",
-        # outdir+"/zarrs/{name}_wurzburg_temp.zarr",
-        # outdir+"/zarrs/{name}_portugal_temp.zarr",
-        "vcf_Haemophilus/annotation_files/metadata_HLR_extern.xlsx",
+        "vcf_Haemophilus/annotation_files/HLR-metadata-298.tsv",
     output:
         outdir + "/feather/{name}.feather",
-        # outdir+"/feather/{name}_luebeck.feather",
-        # outdir+"/feather/{name}_wurzburg.feather",
-        # outdir+"/feather/{name}_portugal.feather"
     conda:
         "envs/sgkit.yaml"
     script:
@@ -377,6 +397,31 @@ rule extract_most_significant_snps_logreg:
         "cat {input[0]} | grep  nonsyn | cut -f 1,2,4,9,10,11 | grep CDS | cut -d _ -f 3 | head -n 53 | cut -f 4,5,9 | sort | uniq  | cut -f 1,2 > {output[0]}"
 
 
+rule extract_ftsI_vcf:
+    input: outdir + "/zarrs/Hinf_norm_mic_linreg_logscaled_results.zarr/"
+    output: outdir + "/vcf/linreg_nonsynonymous_ftsI.vcf"
+    conda: "envs/sgkit.yaml"
+    script: "scripts/extract_ftsI_vcf.py"
+
+rule vcf2plink:
+    input: outdir + "/vcf/linreg_nonsynonymous_ftsI.vcf"
+    output: temp(multiext(outdir + "/tmp/linreg_nonsynonymous_ftsI.", "ped", "log", "map"))
+    params: prefix=lambda wildcards, output: output[0][:-4] 
+    shell: "vcftools --vcf {input[0]} --plink --out {params.prefix}"
+
+rule ped2bed:
+    input: multiext(outdir + "/tmp/linreg_nonsynonymous_ftsI.", "ped", "log", "map")
+    output: multiext(outdir + "/bed/linreg_nonsynonymous_ftsI.", "bed", "bim", "fam")
+    params:
+        in_prefix=lambda wildcards, input: input[0][:-4],
+        out_prefix=lambda wildcards, output: output[0][:-4]
+    shell: "plink --file {params.in_prefix} --make-bed --out {params.out_prefix}"
+
+rule calc_ld_plink:
+    input: outdir + "/bed/linreg_nonsynonymous"
+    output: outdir + "/ld/ld_results"
+    shell: "plink --bfile {input[0]} --ld-window-kb 10000 --ld-window-r2 0 --r2 --out {output[0]}"
+
 rule create_plots_notebook:
     input:
         outdir + "/zarrs/Hinf_norm_mic_linreg_logscaled_results.zarr/",
@@ -384,7 +429,7 @@ rule create_plots_notebook:
         outdir + "/linreg_logscaled.csv",
         outdir + "/logreg.csv"
     log:
-        notebook="logs/notebooks/processed_plots_notebook.ipynb"
+        notebook="logs/notebooks/processed_plots_notebook_lisbon-both.ipynb"
     conda:
         "envs/plots.yaml"
     notebook:

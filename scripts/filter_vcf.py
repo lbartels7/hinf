@@ -6,7 +6,8 @@ import pandas as pd
 import xarray as xr
 
 input_zarr = snakemake.input[0] # type: ignore
-excel_file = snakemake.input[1] # type: ignore
+metadata = snakemake.input[1] # type: ignore
+amended_positions = pd.read_csv(snakemake.input[2], header=None).iloc[:,0]
 minimum_allele_count = snakemake.params["minimum_allele_count"] # type: ignore
 
 output_zarr = snakemake.output[0] # type: ignore
@@ -70,9 +71,44 @@ def filter_maximum_hetero(ds: xr.Dataset, maximum_hetero: int = 10_000) -> xr.Da
         .drop(variables_to_drop)
         )
 
+def remove_indels(ds: xr.Dataset) -> xr.Dataset:
+    """Remove all indels from the dataset. Drops each variant if either the reference or the alternative allele
+    is longer than one base.
+
+    Args:
+        ds (xr.Dataset): Input dataset that may contain indels
+
+    Returns:
+        xr.Dataset: Output dataset wherer all indels are removed.
+    """
+    ref = ds['variant_allele'][:,0].str.len() == 1
+    alt = ds['variant_allele'][:,1].str.len() == 1
+    return(
+        ds
+        .pipe(lambda ds: ds.sel(variants=(ref & alt).compute()))
+        )
+
+def filter_position(ds: xr.Dataset, positions: pd.Series) -> xr.Dataset:
+    """Remove all variants from the dataset, if their position in not present in positions
+
+    Args:
+        ds (xr.Dataset): Input dataset
+        positions (pd.Series): Collection of positions that should be kept in the dataset
+
+    Returns:
+        xr.Dataset: Outputdataset with all positions removed if they are not in positions
+    """
+    isin_mask = ds['variant_position'].isin(positions)
+
+    return(
+        ds
+        .pipe(lambda ds: ds.sel(variants=(isin_mask).compute()))
+        )
 
 # Drop all variables with the ploidy dimension + variant_id_mask and reduce call_genotype to haploid
-ds = (sg.load_dataset(input_zarr) 
+ds = (sg.load_dataset(input_zarr)
+      .pipe(remove_indels)
+      .pipe(filter_position, amended_positions) 
       .drop_vars(['call_genotype_mask', 'call_genotype_phased', 'variant_id_mask'])
       .assign(call_genotype = lambda ds: ds.call_genotype.max(dim='ploidy')))
 
@@ -83,20 +119,20 @@ ds['call_genotype_mask'] = xr.zeros_like(ds.call_genotype).astype(bool)
 
 
 # Load samples with beta_lactamase status negative and set relative mic values to their lower limit ('>8' -> 8)
-df_negative = (pd.read_excel(excel_file, sheet_name='blac_negative')
+df_metadata = (pd.read_csv(metadata, sep='\t')
                .assign(AMP_MIC= lambda df: df['AMP_MIC'].replace('>8','8').astype('float'))
 )
 
 # Convert pandas dataframe to xarray dataArray, so we can merge in the next step
-ds_negative = (df_negative
+ds_metadata = (df_metadata
                .to_xarray()
-               .rename({"SampleID":"samples"})
+               .rename({"ID":"samples"})
                .swap_dims({'index': 'samples'})
                .drop(labels='index')
 )
 # Merge the genotype dataset with the phenotype dataArray (resistance status, MIC values)
 ds = ds.set_index({"samples": "sample_id"})
-ds = ds.merge(ds_negative, join="left")
+ds = ds.merge(ds_metadata, join="left")
 ds = ds.reset_index('samples').reset_coords('samples').rename_vars({'samples': 'sample_id'})
 
 # Dropping variants that are too rare or too common
