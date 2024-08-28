@@ -5,10 +5,6 @@ csv = pd.read_csv(snakemake.input[0], sep='\t', skiprows=[0], na_values=['-'], n
 variant_cols = ['#Pos.', 'Ref', 'Gene', 'GeneName', 'Annotation', 'Main_type', 'Main_allel']
 strain_cols = csv.columns.to_series().filter(regex='^(HLR)').tolist()
 
-# csv = pd.read_csv(snakemake.input[0], sep='\t', skiprows=[0], na_values=['-'], usecols=(variant_cols + strain_cols), low_memory=False)
-
-
-
 
 csv = (pd.read_csv(snakemake.input[0], sep='\t', skiprows=[0], na_values=['-'], # type: ignore
                     usecols=(variant_cols + strain_cols), low_memory=False)

@@ -8,7 +8,7 @@ output_vcf = snakemake.output[0] # type: ignore
 ds_results = sg.load_dataset(input_zarr)
 
 # Extract just the ftsI positions
-# ftsI 1688288 bis 1690120, transpeptidase 1688533 bis 1689074
+# ftsI 1688288 to 1690120, transpeptidase 1688533 to 1689074
 ds_ftsI = ds_results.sel(variants=((1688288 < ds_results.variant_position) & (ds_results.variant_position < 1690120)))
 
 # We just want to have the nonsynonymous variants
@@ -26,6 +26,5 @@ ds_ftsI.attrs = {'contig_lengths': [1830701],
                  'max_alt_alleles_seen': 1,
                  'source': 'sgkit-0.8.0',
                  'vcf_zarr_version': '0.2'}
-# sg.save_dataset(ds_ftsI, 'test/ftsI.zarr')
-# zarr_to_vcf('test/ftsI.zar/', 'test/ftsI.vcf',vcf_header='')
+
 write_vcf(ds_ftsI, output_vcf)

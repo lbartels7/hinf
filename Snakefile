@@ -16,19 +16,6 @@ IDS_all = pd.read_csv('vcf_Haemophilus/annotation_files/HLR-metadata-322.tsv', s
 (A,B,C,) = glob_wildcards('vcf_Haemophilus/{libid}_{machine}_{bla}_151bp.gatk.vcf')
 IDS_all = ['_'.join(i) for i in zip(A,B,C) if i[0] in IDS_all]
 
-# print(IDS_all)
-
-# import pandas as pd
-# df_negative = (pd.read_excel('metadata_HLR_extern.xlsx', sheet_name='blac_negative')
-#                     .assign(AMP_MIC= lambda df: df['AMP_MIC'].replace('>8','8').astype('float'))
-#                     # .query('AMP_MIC < 200')
-# )
-
-# print(df_negative.SampleID.shape)
-
-# container: "docker://continuumio/miniconda3"
-
-
 
 
 def get_all_blac_negative_ids():
@@ -43,8 +30,6 @@ def get_all_blac_negative_ids():
     )
     return (df_negative["FullID"]).tolist()
 
-
-# print(get_all_blac_negative_ids())
 
 
 rule all:
@@ -61,24 +46,8 @@ rule all:
         outdir + "/feather/Hinf_norm_genes.feather",
         outdir + "/feather/Hinf_norm_genes_mic.feather",
         outdir + "/feather/Hinf_norm_genes_bin.feather",
-        # outdir+"/linreg_unscaled.csv",
         outdir + "/linreg_logscaled.csv",
-        # outdir+"/linreg_rankscaled.csv",
         outdir + "/logreg.csv",
-        # expand("test/vcf_paper/compressed/{id}_151bp.gatk.vcf.gz", id=IDS_all)
-
-# rule cp_vcf:
-#     input: expand("vcf_Haemophilus/{id}_151bp.gatk.vcf", id=IDS_all)
-#     output: expand("test/vcf_paper/{id}_151bp.gatk.vcf", id=IDS_all)
-#     params: dir="test/vcf_paper/"
-#     shell: "cp {input} {params.dir}"
-
-# rule comp:
-#     input: "test/vcf_paper/{id}_151bp.gatk.vcf"
-#     output: "test/vcf_paper/compressed/{id}_151bp.gatk.vcf.gz"
-#     shell:  "bgzip -c {input[0]} > {output[0]}"
-
-
 
 rule extract_AMP_nonNAN:
     input:
@@ -203,7 +172,6 @@ rule filter_samples_whole_genome:
             tabix -p vcf {output[0]}; tabix -p vcf {output[1]}"
 
 
-# HLR-103 not provided as VCF, so use --force-samples
 rule filter_samples_genes:
     input:
         outdir + "/Hinf_norm_genes.vcf.gz",
@@ -268,17 +236,6 @@ rule zarr_to_vcf:
         zarr_to_vcf(input[0], output[0])
 
 
-rule linear_regression:
-    input:
-        outdir + "/feather/Hinf_norm_mic.feather",
-        "vcf_Haemophilus/annotation_files/Hinf_Rd-KW20v3_DSM11121_2023-06-15_genes_adjst.txt",
-    output:
-        outdir + "/regression/linear_regression_unscaled.csv",
-    conda:
-        "envs/regression.yaml"
-    script:
-        "scripts/linear_regression.R"
-
 
 rule linear_regression_logscaled:
     input:
@@ -291,17 +248,6 @@ rule linear_regression_logscaled:
     script:
         "scripts/linear_regression_logscaled.R"
 
-
-rule linear_regression_rankscaled:
-    input:
-        outdir + "/feather/Hinf_norm_mic.feather",
-        "vcf_Haemophilus/annotation_files/Hinf_Rd-KW20v3_DSM11121_2023-06-15_genes_adjst.txt",
-    output:
-        outdir + "/regression/linear_regression_rankscaled.csv",
-    conda:
-        "envs/regression.yaml"
-    script:
-        "scripts/linear_regression_rankscaled.R"
 
 
 rule logistic_regression:
@@ -318,19 +264,17 @@ rule logistic_regression:
 
 # Additionally save the original file as feather
 rule create_position_to_mutation_mapping:
-    # input: "vcf_Haemophilus/annotation_files/Hflu_association_data_cf4_cr4_fr75_ph8_l0_x0_271_combined_amended_u95_phylo.csv"
     input:
         "vcf_Haemophilus/annotation_files/HLR_final_logreg_cf4_cr4_fr75_ph8_l0_x1_322_combined_amended.csv",
     output:
         outdir + "/mapping.csv",
         outdir + "/HLR_final_logreg_cf4_cr4_fr75_ph8_l0_x1_322_combined_amended.feather",
-        # outdir+"/Hflu_association_data_cf4_cr4_fr75_ph8_l0_x0_271_combined_amended_u95_phylo.feather"
     conda:
         "envs/pandas.yaml"
     script:
         "scripts/create_position_to_mutation_mapping.py"
 
-# Rule inheritance maybe
+# Use rule inheritance maybe
 rule create_final_linear_regression_result_object:
     input:
         mapping=outdir + "/mapping.csv",
@@ -356,7 +300,7 @@ rule create_final_logistic_regression_result_object:
     script:
         "scripts/annotate_with_mutations.py"
 
-# Rule inheritance
+# Rule inheritance also
 rule create_results_table_linreg:
     input:
         outdir + "/zarrs/Hinf_norm_mic_linreg{scaling}_results.zarr",
@@ -377,24 +321,6 @@ rule create_results_table_logreg:
         "envs/sgkit.yaml"
     script:
         "scripts/create_results_table_logreg.py"
-
-# Rule inheritance
-rule extract_most_significant_snps_linreg:
-    input:
-        outdir + "/linreg{scaling}.csv",
-    output:
-        outdir + "/sigsnps_linreg{scaling}.txt",
-    shell:
-        "cat {input[0]} | grep  nonsyn | cut -f 1,2,4,10,11,13  | grep CDS | cut -d _ -f 3 | head -n 53 | cut -f 4,5,9 | sort | uniq  | cut -f 1,2 > {output[0]}"
-
-
-rule extract_most_significant_snps_logreg:
-    input:
-        outdir + "/logreg.csv",
-    output:
-        outdir + "/sigsnps_logreg.txt",
-    shell:
-        "cat {input[0]} | grep  nonsyn | cut -f 1,2,4,9,10,11 | grep CDS | cut -d _ -f 3 | head -n 53 | cut -f 4,5,9 | sort | uniq  | cut -f 1,2 > {output[0]}"
 
 
 rule extract_ftsI_vcf:
@@ -421,16 +347,3 @@ rule calc_ld_plink:
     input: outdir + "/bed/linreg_nonsynonymous"
     output: outdir + "/ld/ld_results"
     shell: "plink --bfile {input[0]} --ld-window-kb 10000 --ld-window-r2 0 --r2 --out {output[0]}"
-
-rule create_plots_notebook:
-    input:
-        outdir + "/zarrs/Hinf_norm_mic_linreg_logscaled_results.zarr/",
-        outdir + "/zarrs/Hinf_norm_bin_logreg_results.zarr/",
-        outdir + "/linreg_logscaled.csv",
-        outdir + "/logreg.csv"
-    log:
-        notebook="logs/notebooks/processed_plots_notebook_lisbon-both.ipynb"
-    conda:
-        "envs/plots.yaml"
-    notebook:
-        "notebooks/plots.py.ipynb"
