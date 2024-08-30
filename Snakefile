@@ -9,11 +9,11 @@ ORIGIN = ["luebeck", "wurzburg", "portugal"]
 outdir = config["output-dir"]
 
 IDS_gwas = pd.read_csv('vcf_Haemophilus/annotation_files/HLR-metadata-298.tsv', sep='\t')['libID'].to_list()
-(A,B,C,) = glob_wildcards('vcf_Haemophilus/{libid}_{machine}_{bla}_151bp.gatk.vcf')
+(A,B,C,) = glob_wildcards('vcf_Haemophilus/{libid}_{machine}_{coord}_151bp.gatk.vcf')
 IDS_gwas = ['_'.join(i) for i in zip(A,B,C) if i[0] in IDS_gwas]
 
 IDS_all = pd.read_csv('vcf_Haemophilus/annotation_files/HLR-metadata-322.tsv', sep='\t')['libID'].to_list()
-(A,B,C,) = glob_wildcards('vcf_Haemophilus/{libid}_{machine}_{bla}_151bp.gatk.vcf')
+(A,B,C,) = glob_wildcards('vcf_Haemophilus/{libid}_{machine}_{coord}_151bp.gatk.vcf')
 IDS_all = ['_'.join(i) for i in zip(A,B,C) if i[0] in IDS_all]
 
 
