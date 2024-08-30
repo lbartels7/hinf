@@ -7,25 +7,8 @@
 .vscode/
 
 results/
-results-revision/
-results-revision2/
-results-revision2-no_lisbon/
-results-revision-lisbon-both/
-results-revision-lisbon-both2/
-results-revision-lisbon-both3/
-results-revision-no_lisbon-both/
-results-revision-no_lisbon-both2
-re
 logs/
-test/
-feather/
 vcf_Haemophilus/
-notebooks/
-
-/stats.xlsx
-/lintemp.txt
-/linscaledtemp.txt
-/logtemp.txt
 
 *.pdf
 *.svg
