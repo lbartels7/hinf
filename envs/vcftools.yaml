@@ -1,5 +1,5 @@
-name: bcftools
+name: vcftools
 channels:
  - bioconda
 dependencies:
- - bcftools=1.18
+ - vcftools=0.1.16

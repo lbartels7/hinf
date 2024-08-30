@@ -1,5 +1,5 @@
-name: bcftools
+name: plink
 channels:
  - bioconda
 dependencies:
- - bcftools=1.18
+ - plink=1.90b6.21

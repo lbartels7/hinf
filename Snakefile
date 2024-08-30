@@ -109,6 +109,7 @@ rule vcf_to_vcfgz:
     output:
         temp(outdir + "/vcf/{id}.gatk.vcf.gz"),
         temp(outdir + "/vcf/{id}.gatk.vcf.gz.tbi"),
+    conda: "envs/bcftools.yaml"
     shell:
         "bgzip -c {input} > {output}; tabix -p vcf {output[0]}"
 
@@ -118,7 +119,7 @@ rule merge_vcfs:
         vcf=expand("vcf_Haemophilus/HLR-{id}_151bp.gatk.vcf", id=IDS),
     output:
         outdir + "/Hinf.vcf.gz",
-    # conda: "envs/bcftools.yaml"
+    conda: "envs/bcftools.yaml"
     shell:
         "bcftools merge --no-index -0 {input.vcf} -Oz -o {output}; tabix -p vcf {output[0]}"
 
@@ -128,7 +129,7 @@ rule normalize:
         outdir + "/Hinf.vcf.gz",
     output:
         outdir + "/Hinf_norm.vcf.gz",
-    # conda: "envs/bcftools.yaml"
+    conda: "envs/bcftools.yaml"
     shell:
         "bcftools norm  -m- --multi-overlaps 0 {input} -Oz -o {output}; tabix -p vcf {output[0]}"
 
@@ -141,7 +142,7 @@ rule filter_intergenic_variants:
         gff="vcf_Haemophilus/annotation_files/Hinf_Rd-KW20v3_DSM11121_2023-06-15.gff3",
     output:
         outdir + "/Hinf_norm_genes.vcf.gz",
-    # conda: "envs/bedtools.yaml"
+    conda: "envs/bedtools.yaml"
     shell:
         "bedtools intersect -a {input.vcf} -b {input.gff} -header -u | bgzip > {output}"
 
@@ -151,12 +152,12 @@ rule create_index_for_genes:
         outdir + "/Hinf_norm_genes.vcf.gz",
     output:
         outdir + "/Hinf_norm_genes.vcf.gz.csi",
-    # conda: "envs/bcftools.yaml"
+    conda: "envs/bcftools.yaml"
     shell:
         "tabix -C {input}"
 
 
-# HLR-103 not provided as VCF, so use --force-samples
+
 rule filter_samples_whole_genome:
     input:
         outdir + "/Hinf_norm.vcf.gz",
@@ -165,7 +166,7 @@ rule filter_samples_whole_genome:
     output:
         outdir + "/Hinf_norm_mic.vcf.gz",
         outdir + "/Hinf_norm_bin.vcf.gz",
-    # conda: "envs/bcftools.yaml"
+    conda: "envs/bcftools.yaml"
     shell:
         "bcftools view -S {input[1]} --force-samples {input[0]} -Oz -o {output[0]}; \
             bcftools view -S {input[2]} --force-samples {input[0]} -Oz -o {output[1]}; \
@@ -180,6 +181,7 @@ rule filter_samples_genes:
     output:
         outdir + "/Hinf_norm_genes_mic.vcf.gz",
         outdir + "/Hinf_norm_genes_bin.vcf.gz",
+    conda: "envs/bcftools.yaml"
     shell:
         "bcftools view -S {input[1]} --force-samples {input[0]} -Oz -o {output[0]} \
             && bcftools view -S {input[2]} --force-samples {input[0]} -Oz -o {output[1]}; \
@@ -332,7 +334,8 @@ rule extract_ftsI_vcf:
 rule vcf2plink:
     input: outdir + "/vcf/linreg_nonsynonymous_ftsI.vcf"
     output: temp(multiext(outdir + "/tmp/linreg_nonsynonymous_ftsI.", "ped", "log", "map"))
-    params: prefix=lambda wildcards, output: output[0][:-4] 
+    params: prefix=lambda wildcards, output: output[0][:-4]
+    conda: "envs/vcftools.yaml"
     shell: "vcftools --vcf {input[0]} --plink --out {params.prefix}"
 
 rule ped2bed:
@@ -341,9 +344,11 @@ rule ped2bed:
     params:
         in_prefix=lambda wildcards, input: input[0][:-4],
         out_prefix=lambda wildcards, output: output[0][:-4]
+    conda: "envs/plink.yaml"
     shell: "plink --file {params.in_prefix} --make-bed --out {params.out_prefix}"
 
 rule calc_ld_plink:
     input: outdir + "/bed/linreg_nonsynonymous"
     output: outdir + "/ld/ld_results"
+    conda: "envs/plink.yaml"
     shell: "plink --bfile {input[0]} --ld-window-kb 10000 --ld-window-r2 0 --r2 --out {output[0]}"
