@@ -18,20 +18,6 @@ IDS_all = ['_'.join(i) for i in zip(A,B,C) if i[0] in IDS_all]
 
 
 
-def get_all_blac_negative_ids():
-    df_negative = (
-        pd.read_csv(
-            "vcf_Haemophilus/annotation_files/HLR-metadata-322.tsv", sep='\t'
-        )
-        .dropna(subset="AMP_MIC")
-        .assign(AMP_MIC=lambda df: df["AMP_MIC"].replace(">8", "8").astype("float"))
-        .query("AMP_MIC < 8")
-        # .query('SampleID != "HLR-103"')
-    )
-    return (df_negative["FullID"]).tolist()
-
-
-
 rule all:
     input:
         outdir + "/samples_AMP_nonNAN.csv",
