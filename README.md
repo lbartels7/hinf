@@ -1,4 +1,4 @@
-# Placeholder
+# Revisiting mutational resistance to ampicillin and cefotaxime in *Haemophilus influenzae*
 Placeholder for small explanations and citation right after publication.
 
 # Installation
