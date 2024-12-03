@@ -16,7 +16,7 @@ df_amp_mic = (df_negative
               .dropna(subset='AMP_MIC')
               .assign(AMP_MIC = lambda df: df['AMP_MIC'].replace('>8','8').astype('float'))
               .query('AMP_MIC <= @maximum_mic')
-              .query("Institute != 'Lisbon'")
+            #   .query("Institute != 'Lisbon'")
 )
 
 IDs_mic = df_amp_mic.ID
@@ -25,7 +25,7 @@ IDs_mic.to_csv(output_csv_mic, index=False, header=False) # type: ignore
 # Keep all samples with resistance status
 df_amp_binary = (df_negative
                  .dropna(subset='AMP')
-                 .query("Institute != 'Lisbon'")
+                #  .query("Institute != 'Lisbon'")
 )
 IDs_binary = df_amp_binary.ID
 IDs_binary.to_csv(output_csv_amp, index=False, header=False) # type: ignore
