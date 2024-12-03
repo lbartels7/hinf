@@ -5,10 +5,14 @@
 .ipynb_checkpoints/
 .snakemake/
 .vscode/
+README.html
+
 
 results/
+results_temp/
 logs/
-vcf_Haemophilus/
+README_files/
+# vcf_Haemophilus/
 
 *.pdf
 *.svg
