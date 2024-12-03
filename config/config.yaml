@@ -1,9 +1,9 @@
-
-
+# Filter criteria for variants
 variant-filtering:
   minimum-allele-count: 10
 
+# Filter criteria for isolates
 sample-filtering:
   maximum-mic: 8
 
-output-dir: "results"
+output-dir: "results_temp"
