@@ -4,16 +4,18 @@ import pandas as pd
 configfile: "config/config.yaml"
 
 
-(IDS,) = glob_wildcards("vcf_Haemophilus/HLR-{id}_151bp.gatk.vcf")
+(IDS,) = glob_wildcards("vcf_Haemophilus/HLR-{id}_151bp.gatk.vcf.gz")
 ORIGIN = ["luebeck", "wurzburg", "portugal"]
 outdir = config["output-dir"]
 
+# Extract all IDs of isolates that should go into the GWAS
 IDS_gwas = pd.read_csv('vcf_Haemophilus/annotation_files/HLR-metadata-298.tsv', sep='\t')['libID'].to_list()
-(A,B,C,) = glob_wildcards('vcf_Haemophilus/{libid}_{machine}_{coord}_151bp.gatk.vcf')
+(A,B,C,) = glob_wildcards('vcf_Haemophilus/{libid}_{machine}_{coord}_151bp.gatk.vcf.gz')
 IDS_gwas = ['_'.join(i) for i in zip(A,B,C) if i[0] in IDS_gwas]
 
+# Extract all IDs of isolates of entire study
 IDS_all = pd.read_csv('vcf_Haemophilus/annotation_files/HLR-metadata-322.tsv', sep='\t')['libID'].to_list()
-(A,B,C,) = glob_wildcards('vcf_Haemophilus/{libid}_{machine}_{coord}_151bp.gatk.vcf')
+(A,B,C,) = glob_wildcards('vcf_Haemophilus/{libid}_{machine}_{coord}_151bp.gatk.vcf.gz')
 IDS_all = ['_'.join(i) for i in zip(A,B,C) if i[0] in IDS_all]
 
 
@@ -35,6 +37,12 @@ rule all:
         outdir + "/linreg_logscaled.csv",
         outdir + "/logreg.csv",
 
+
+rule unzip_amended_file:
+    input: "vcf_Haemophilus/annotation_files/HLR_final_logreg_cf4_cr4_fr75_ph8_l0_x1_322_combined_amended.csv.zip"
+    output: "vcf_Haemophilus/annotation_files/HLR_final_logreg_cf4_cr4_fr75_ph8_l0_x1_322_combined_amended.csv"
+    shell: "unzip {input[0]} -d vcf_Haemophilus/annotation_files"
+
 rule extract_AMP_nonNAN:
     input:
         "vcf_Haemophilus/annotation_files/HLR-metadata-298.tsv",
@@ -47,6 +55,13 @@ rule extract_AMP_nonNAN:
         "envs/pandas.yaml"
     script:
         "scripts/extract_sample_ids.py"
+
+
+rule decompress_vcfs:
+    input: "vcf_Haemophilus/HLR-{id}_151bp.gatk.vcf.gz" 
+    output: temp("vcf_Haemophilus/HLR-{id}_151bp.gatk.vcf")
+    conda: "envs/bcftools.yaml"
+    shell:  "bgzip -d -o {output} {input}"
 
 
 rule calculate_statistics:
@@ -70,7 +85,6 @@ rule calculate_statistics:
                     matched_lines_12 = [
                         line for line in lines if re.search("1/2", line)
                     ]
-                    # print(os.path.basename(f_in.name), len(datalines), len(matched_lines_01), len(matched_lines_12), sep='\t', file=f_out)
                     f_out.write(
                         "\t".join(
                                 (
@@ -102,7 +116,7 @@ rule vcf_to_vcfgz:
 
 rule merge_vcfs:
     input:
-        vcf=expand("vcf_Haemophilus/HLR-{id}_151bp.gatk.vcf", id=IDS),
+        vcf=expand("vcf_Haemophilus/HLR-{id}_151bp.gatk.vcf.gz", id=IDS),
     output:
         outdir + "/Hinf.vcf.gz",
     conda: "envs/bcftools.yaml"
@@ -288,7 +302,7 @@ rule create_final_logistic_regression_result_object:
     script:
         "scripts/annotate_with_mutations.py"
 
-# Rule inheritance also
+
 rule create_results_table_linreg:
     input:
         outdir + "/zarrs/Hinf_norm_mic_linreg{scaling}_results.zarr",
