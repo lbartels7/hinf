@@ -38,10 +38,10 @@ rule all:
         outdir + "/logreg.csv",
 
 
-rule unzip_amended_file:
-    input: "vcf_Haemophilus/annotation_files/HLR_final_logreg_cf4_cr4_fr75_ph8_l0_x1_322_combined_amended.csv.zip"
-    output: "vcf_Haemophilus/annotation_files/HLR_final_logreg_cf4_cr4_fr75_ph8_l0_x1_322_combined_amended.csv"
-    shell: "unzip {input[0]} -d vcf_Haemophilus/annotation_files"
+# rule unzip_amended_file:
+#     input: "vcf_Haemophilus/annotation_files/HLR_final_logreg_cf4_cr4_fr75_ph8_l0_x1_322_combined_amended.csv.zip"
+#     output: "vcf_Haemophilus/annotation_files/HLR_final_logreg_cf4_cr4_fr75_ph8_l0_x1_322_combined_amended.csv"
+#     shell: "unzip {input[0]} -d vcf_Haemophilus/annotation_files"
 
 rule extract_AMP_nonNAN:
     input:
@@ -265,21 +265,21 @@ rule logistic_regression:
 
 
 # Additionally save the original file as feather
-rule create_position_to_mutation_mapping:
-    input:
-        "vcf_Haemophilus/annotation_files/HLR_final_logreg_cf4_cr4_fr75_ph8_l0_x1_322_combined_amended.csv",
-    output:
-        outdir + "/mapping.csv",
-        outdir + "/HLR_final_logreg_cf4_cr4_fr75_ph8_l0_x1_322_combined_amended.feather",
-    conda:
-        "envs/pandas.yaml"
-    script:
-        "scripts/create_position_to_mutation_mapping.py"
+# rule create_position_to_mutation_mapping:
+#     input:
+#         "vcf_Haemophilus/annotation_files/HLR_final_logreg_cf4_cr4_fr75_ph8_l0_x1_322_combined_amended.csv",
+#     output:
+#         outdir + "/mapping.csv",
+#         outdir + "/HLR_final_logreg_cf4_cr4_fr75_ph8_l0_x1_322_combined_amended.feather",
+#     conda:
+#         "envs/pandas.yaml"
+#     script:
+#         "scripts/create_position_to_mutation_mapping.py"
 
 # Use rule inheritance maybe
 rule create_final_linear_regression_result_object:
     input:
-        mapping=outdir + "/mapping.csv",
+        mapping="vcf_Haemophilus/annotation_files/mapping.csv",
         gwas_results=outdir + "/regression/linear_regression{scaling}.csv",
         input_dataset=outdir + "/zarrs/Hinf_norm_mic_temp.zarr/",
     output:
@@ -292,7 +292,7 @@ rule create_final_linear_regression_result_object:
 
 rule create_final_logistic_regression_result_object:
     input:
-        mapping=outdir + "/mapping.csv",
+        mapping="vcf_Haemophilus/annotation_files/mapping.csv",
         gwas_results=outdir + "/regression/logistic_regression.csv",
         input_dataset=outdir + "/zarrs/Hinf_norm_bin_temp.zarr/",
     output:

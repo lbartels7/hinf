@@ -1,5 +1,13 @@
 # Revisiting mutational resistance to ampicillin and cefotaxime in *Haemophilus influenzae*
-Placeholder for small explanations and citation right after publication.
+
+This repository contains the snakemake workflow used to perform the
+genome-wide association study described in the publication. Once the
+pipeline has been successfully executed, the figures can be recreated
+using the Jupyter notebook supplied.
+
+Diricks, M., Petersen, S., Bartels, L. et al. Revisiting mutational resistance to ampicillin and cefotaxime in Haemophilus influenzae. Genome Med 16, 140 (2024).
+ https://doi.org/10.1186/s13073-024-01406-4
+
 
 # Installation
 Please install [miniconda](https://docs.anaconda.com/miniconda/) first. Afterwards run
